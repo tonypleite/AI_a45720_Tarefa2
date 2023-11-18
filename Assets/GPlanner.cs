@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -84,5 +85,69 @@ public class GPlanner
         }
 
         return queue;
+    }
+
+    private bool BuildGraph(Node parent, List<Node> leaves, List<GAction> usuableActions, Dictionary<string, int> goal)
+    {
+        bool foundPath = false;
+        foreach(GAction action in usuableActions)
+        {
+            if(action.IsAchievableGiven(parent.state))
+            {
+                Dictionary<string, int> CurrentState = new Dictionary<string, int>(parent.state);
+                foreach (KeyValuePair<string, int>eff in action.effects)
+                {
+                    if(!CurrentState.ContainsKey(eff.Key))
+                    {
+                        CurrentState.Add(eff.Key, eff.Value);
+                    }
+                }
+
+                Node node = new Node(parent, parent.cost + action.cost, CurrentState, action);
+
+                if (GoalAchieved(goal, CurrentState))
+                {
+                    leaves.Add(node);
+                    foundPath = true;
+                }
+
+                else
+                {
+                    List<GAction> subset = ActionSubset(usuableActions, action);
+                    bool found = BuildGraph(node, leaves, subset, goal);
+
+                    if (found)
+                    {
+                        foundPath = true;
+                    }
+                }
+            } 
+        }
+        return foundPath;
+    }
+
+    private bool GoalAchieved(Dictionary<string, int> goal, Dictionary<string, int> state)
+    {
+        foreach (KeyValuePair<string, int> g in goal)
+        {
+            if (!state.ContainsKey(g.Key))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private List<GAction> ActionSubset(List<GAction> actions, GAction removeME)
+    {
+        List<GAction> subset = new List<GAction>();
+        foreach (GAction a in actions)
+        {
+            if (!a.Equals(removeME))
+            {
+                subset.Add(a);
+            }
+        }
+        return subset;
     }
 }
